@@ -217,7 +217,7 @@ def enhance_image(image):
 
 def detect_faces(image):
     """
-    Detect faces in an image and draw rectangles around them.
+    Detect faces in an image using Haar Cascade Classifier.
     Returns the image with detected faces marked and the number of faces found.
     """
     try:
@@ -236,26 +236,43 @@ def detect_faces(image):
         
         # Load the pre-trained face detection classifier
         face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        if face_cascade.empty():
+            raise Exception("Failed to load Haar cascade classifier")
         
         # Convert to grayscale for face detection
         gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
         
-        # Detect faces
+        # Detect faces with optimized parameters
         faces = face_cascade.detectMultiScale(
             gray,
             scaleFactor=1.1,
             minNeighbors=5,
-            minSize=(30, 30)
+            minSize=(30, 30),
+            flags=cv2.CASCADE_SCALE_IMAGE
         )
         
         # Draw rectangles around detected faces
         for (x, y, w, h) in faces:
-            # Draw rectangle
+            # Draw rectangle with rounded corners
             cv2.rectangle(img_bgr, (x, y), (x+w, y+h), (0, 255, 0), 2)
             
-            # Add text showing "Face Detected"
-            cv2.putText(img_bgr, 'Face Detected', (x, y-10),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+            # Add text with background for better visibility
+            text = 'Face Detected'
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.8
+            thickness = 2
+            (text_width, text_height), _ = cv2.getTextSize(text, font, font_scale, thickness)
+            
+            # Draw background rectangle for text
+            cv2.rectangle(img_bgr, 
+                         (x, y - text_height - 10),
+                         (x + text_width, y),
+                         (0, 255, 0),
+                         -1)
+            
+            # Draw text
+            cv2.putText(img_bgr, text, (x, y - 5),
+                       font, font_scale, (0, 0, 0), thickness)
         
         # Convert back to RGB
         result_img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
@@ -263,11 +280,144 @@ def detect_faces(image):
         return result_img, len(faces)
         
     except Exception as e:
-        print(f"Error in face detection: {str(e)}")
+        print(f"Error in Haar face detection: {str(e)}")
         # Return the original image and 0 faces if something goes wrong
         if isinstance(image, np.ndarray):
             return image, 0
-        return np.array(image), 0 
+        return np.array(image), 0
+
+def detect_faces_dnn(image):
+    """
+    Detect faces in an image using OpenCV's DNN face detector.
+    This method is more accurate than Haar features but requires downloading the model.
+    Returns the image with detected faces marked and the number of faces found.
+    """
+    try:
+        # Convert PIL image to numpy array if needed
+        if not isinstance(image, np.ndarray):
+            img_array = np.array(image)
+        else:
+            img_array = image.copy()
+            
+        # Convert to RGB if needed
+        if len(img_array.shape) == 2:  # If grayscale
+            img_array = cv2.cvtColor(img_array, cv2.COLOR_GRAY2RGB)
+            
+        # Convert to BGR for OpenCV processing
+        img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
+        
+        # Get image dimensions
+        height, width = img_bgr.shape[:2]
+        
+        # Load the pre-trained face detection model
+        model_path = "face_detection_model/res10_300x300_ssd_iter_140000.caffemodel"
+        config_path = "face_detection_model/deploy.prototxt"
+        
+        # Create model directory if it doesn't exist
+        os.makedirs("face_detection_model", exist_ok=True)
+        
+        # Download model files if they don't exist
+        if not os.path.exists(model_path) or not os.path.exists(config_path):
+            print("Downloading face detection model files...")
+            
+            # Download the model file
+            model_url = "https://raw.githubusercontent.com/opencv/opencv_3rdparty/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel"
+            config_url = "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt"
+            
+            try:
+                # Download model
+                response = requests.get(model_url, timeout=30)
+                if response.status_code == 200:
+                    with open(model_path, 'wb') as f:
+                        f.write(response.content)
+                    print("Successfully downloaded face detection model")
+                else:
+                    raise Exception("Failed to download model file")
+                
+                # Download config
+                response = requests.get(config_url, timeout=30)
+                if response.status_code == 200:
+                    with open(config_path, 'wb') as f:
+                        f.write(response.content)
+                    print("Successfully downloaded model configuration")
+                else:
+                    raise Exception("Failed to download config file")
+                    
+            except Exception as e:
+                print(f"Error downloading model files: {str(e)}")
+                raise Exception("Failed to download face detection model files")
+        
+        # Load the DNN model
+        net = cv2.dnn.readNet(model_path, config_path)
+        if net.empty():
+            raise Exception("Failed to load DNN model")
+        
+        # Prepare image for the model
+        blob = cv2.dnn.blobFromImage(img_bgr, 1.0, (300, 300), [104, 117, 123], False, False)
+        
+        # Set input for the model
+        net.setInput(blob)
+        
+        # Forward pass
+        detections = net.forward()
+        
+        # Process detections
+        faces = []
+        confidences = []
+        for i in range(detections.shape[2]):
+            confidence = detections[0, 0, i, 2]
+            
+            # Filter detections by confidence
+            if confidence > 0.5:  # Confidence threshold
+                # Get bounding box coordinates
+                x1 = int(detections[0, 0, i, 3] * width)
+                y1 = int(detections[0, 0, i, 4] * height)
+                x2 = int(detections[0, 0, i, 5] * width)
+                y2 = int(detections[0, 0, i, 6] * height)
+                
+                # Ensure coordinates are within image bounds
+                x1 = max(0, x1)
+                y1 = max(0, y1)
+                x2 = min(width, x2)
+                y2 = min(height, y2)
+                
+                faces.append((x1, y1, x2-x1, y2-y1))
+                confidences.append(confidence)
+        
+        # Draw rectangles around detected faces
+        for (x, y, w, h), conf in zip(faces, confidences):
+            # Draw rectangle with rounded corners
+            cv2.rectangle(img_bgr, (x, y), (x+w, y+h), (0, 255, 0), 2)
+            
+            # Add text with confidence score
+            text = f'Face ({conf:.2f})'
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.8
+            thickness = 2
+            (text_width, text_height), _ = cv2.getTextSize(text, font, font_scale, thickness)
+            
+            # Draw background rectangle for text
+            cv2.rectangle(img_bgr, 
+                         (x, y - text_height - 10),
+                         (x + text_width, y),
+                         (0, 255, 0),
+                         -1)
+            
+            # Draw text
+            cv2.putText(img_bgr, text, (x, y - 5),
+                       font, font_scale, (0, 0, 0), thickness)
+        
+        # Convert back to RGB
+        result_img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+        
+        return result_img, len(faces)
+        
+    except Exception as e:
+        print(f"Error in DNN face detection: {str(e)}")
+        # Return the original image and 0 faces if something goes wrong
+        if isinstance(image, np.ndarray):
+            return image, 0
+        return np.array(image), 0
 
 def download_age_model():
     """
