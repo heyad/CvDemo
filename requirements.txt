@@ -1,0 +1,14 @@
+streamlit==1.42.2
+pillow==11.1.0
+numpy==1.26.4
+torch>=2.2.0
+torchvision>=0.17.0
+scipy==1.15.2
+opencv-python-headless==4.8.1.78
+requests==2.32.3
+fastai==2.7.13
+fastcore>=1.5.29,<1.6
+fastprogress>=0.2.4
+matplotlib
+scikit-learn
+spacy<4
