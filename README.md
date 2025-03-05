@@ -1,26 +1,27 @@
-# Advanced Image Processing App
+# Computer Vision Demo
 
-A Streamlit-based web application for advanced image processing, featuring:
+A comprehensive demonstration of computer vision capabilities using Python, featuring:
 
 - 🎨 AI-powered image colorization using ResNet architecture
 - 🖼️ Simple colorization using OpenCV
-- ✨ Image enhancement
-- 👤 Face detection
+- ✨ Image enhancement and processing
+- 👤 Face detection with age estimation
 - 🔄 Grayscale conversion
 
 ## Features
 
 - Modern, user-friendly interface built with Streamlit
-- Multiple processing options for different use cases
-- Real-time image processing
+- Multiple processing options for different computer vision tasks
+- Real-time image processing and analysis
 - Easy-to-use file upload and download functionality
+- Advanced AI-powered colorization using deep learning
 
 ## Installation
 
 1. Clone the repository:
 ```bash
-git clone <your-repository-url>
-cd <repository-name>
+git clone https://github.com/heyad/CvDemo.git
+cd CvDemo
 ```
 
 2. Create and activate a virtual environment:
@@ -48,23 +49,19 @@ The application will be available at `http://localhost:8501`
 - Python 3.8+
 - See `requirements.txt` for full list of dependencies
 
-## License
-
-MIT License
-
 ## Project Structure
 
 ```
 .
 ├── app.py                  # Main Streamlit application
-├── colorization_model.py   # Image processing and colorization logic
+├── colorization_model.py   # Computer vision and deep learning models
 ├── requirements.txt        # Project dependencies
 └── README.md              # Project documentation
 ```
 
 ## Dependencies
 
-- Python 3.6+
+- Python 3.8+
 - streamlit==1.42.2
 - pillow==11.1.0
 - numpy==1.26.4
@@ -82,14 +79,11 @@ MIT License
 
 ## Acknowledgments
 
-- OpenCV for providing the colorization algorithms
-- Streamlit for the excellent web framework
-- The open-source community for various image processing tools and libraries
+- OpenCV for computer vision algorithms
+- PyTorch for deep learning capabilities
+- Streamlit for the web interface
+- The open-source community for various CV tools and libraries
 
-## Future Improvements
+## License
 
-- Add more colorization algorithms
-- Implement neural network-based colorization
-- Add batch processing capabilities
-- Improve error handling and user feedback
-- Add image preprocessing options 
+MIT License 
